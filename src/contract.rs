@@ -31,10 +31,12 @@ pub mod exec {
     pub fn donate(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
         let mut counter = COUNTER.load(deps.storage)?;
         let minimal_donation = MINIMAL_DONATION.load(deps.storage)?;
-     
-        if info.funds.iter().any(|coin| {
-            coin.denom == minimal_donation.denom && coin.amount >= minimal_donation.amount
-        }) {
+
+        if minimal_donation.amount.is_zero()
+            || info.funds.iter().any(|coin| {
+                coin.denom == minimal_donation.denom && coin.amount >= minimal_donation.amount
+            })
+        {
             counter += 1;
             COUNTER.save(deps.storage, &counter)?;
         }
