@@ -21,7 +21,7 @@ pub struct ValueResp {
     pub value: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecMsg {
     Donate {},
@@ -30,4 +30,9 @@ pub enum ExecMsg {
         counter: u64,
     },
     Withdraw {},
+    WithdrawTo {
+        receiver: String,
+        #[serde(default)]
+        funds: Vec<Coin>,
+    },
 }
