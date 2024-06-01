@@ -29,4 +29,5 @@ pub enum ExecMsg {
         #[serde(default)]
         counter: u64,
     },
+    Withdraw {},
 }

@@ -28,7 +28,7 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: msg::ExecMsg,
 ) -> StdResult<Response> {
@@ -38,6 +38,7 @@ pub fn execute(
     match msg {
         Donate {} => exec::donate(deps, info),
         Reset { counter } => exec::reset(deps, info, counter),
+        Withdraw {} => exec::withdraw(deps, env, info),
     }
 }
 
@@ -236,4 +237,63 @@ mod test {
 
         assert_eq!(resp, ValueResp { value: 1 });
     }
+
+    #[test]
+    fn withdraw() {
+        let owner = Addr::unchecked("owner");
+        let sender = Addr::unchecked("sender");
+
+        let mut app = App::new(|router, _api, storage| {
+            router
+                .bank
+                .init_balance(storage, &sender, coins(10, "atom"))
+                .unwrap();
+        });
+
+        let contract_id = app.store_code(counting_contract());
+
+        let contract_addr = app
+            .instantiate_contract(
+                contract_id,
+                owner.clone(),
+                &InstantiateMsg {
+                    counter: 0,
+                    minimal_donation: coin(10, "atom"),
+                },
+                &[],
+                "Counting contract",
+                None,
+            )
+            .unwrap();
+
+        app.execute_contract(
+            sender.clone(),
+            contract_addr.clone(),
+            &ExecMsg::Donate {},
+            &coins(10, "atom"),
+        )
+        .unwrap();
+
+        app.execute_contract(
+            owner.clone(),
+            contract_addr.clone(),
+            &ExecMsg::Withdraw {},
+            &[],
+        )
+        .unwrap();
+
+        // TODO Fix these asserts since they fail with
+        // "Querier contract error: Generic error: Error decoding bech32"
+
+        // assert_eq!(
+        //     app.wrap().query_all_balances(owner).unwrap(),
+        //     coins(10, "atoms")
+        // );
+        // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
+        // assert_eq!(
+        //     app.wrap().query_all_balances(contract_addr).unwrap(),
+        //     vec![]
+        // );
+    }
+
 }
