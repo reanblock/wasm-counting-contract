@@ -22,4 +22,8 @@ pub struct ValueResp {
 #[serde(rename_all = "snake_case")]
 pub enum ExecMsg {
     Poke {},
+    Reset {
+        #[serde(default)]
+        counter: u64,
+    },
 }
