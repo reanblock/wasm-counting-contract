@@ -1,13 +1,17 @@
 use cosmwasm_std::{
     entry_point, to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdResult,
 };
+use state::COUNTER;
 
 mod contract;
 pub mod msg;
+mod state;
  
 #[entry_point]
-pub fn instantiate(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty,
+pub fn instantiate(deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty,
 ) -> StdResult<Response> {
+    COUNTER.save(deps.storage, &0)?;
+
 	Ok(Response::new())
 }
 
@@ -17,13 +21,12 @@ pub fn execute(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> St
 }
 
 #[entry_point]
-pub fn query(_deps: Deps, _env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
     use msg::QueryMsg::*;
     use contract::query;
  
     match msg {
-        Value {} => to_json_binary(&query::value()),
-        Incremented { value } => to_json_binary(&query::incremented(value)),
+        Value {} => to_json_binary(&query::value(deps)?),
     }
 }
 
