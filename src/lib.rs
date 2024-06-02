@@ -246,8 +246,9 @@ mod test {
 
     #[test]
     fn withdraw() {
-        let owner = Addr::unchecked("owner");
-        let sender = Addr::unchecked("sender");
+        // moved to after creating the app instance (see below)
+        // let owner = Addr::unchecked("owner");
+        let sender = Addr::unchecked("sender").into();
 
         let mut app = App::new(|router, _api, storage| {
             router
@@ -255,6 +256,11 @@ mod test {
                 .init_balance(storage, &sender, coins(10, "atom"))
                 .unwrap();
         });
+
+        // creating addresses using this approach to support Bech32
+        // ref: https://medium.com/cosmwasm/addresses-in-cosmwasm-multitest-68207ae845e6
+        let owner = app.api().addr_make("owner");
+        // let sender = app.api().addr_make("sender");
 
         let contract_id = app.store_code(counting_contract());
 
@@ -288,25 +294,26 @@ mod test {
         )
         .unwrap();
 
-        // TODO Fix these asserts since they fail with
-        // "Querier contract error: Generic error: Error decoding bech32"
-
-        // assert_eq!(
-        //     app.wrap().query_all_balances(owner).unwrap(),
-        //     coins(10, "atoms")
-        // );
-        // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
-        // assert_eq!(
-        //     app.wrap().query_all_balances(contract_addr).unwrap(),
-        //     vec![]
-        // );
+    // TODO Fix this asserts since they fail with
+    // "Querier contract error: Generic error: Error decoding bech32"
+    // I only fixed the tests with owner but not sender because its needed in the instantian!
+    // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
+    
+    assert_eq!(
+        app.wrap().query_all_balances(owner).unwrap(),
+        coins(10, "atom")
+    );
+        assert_eq!(
+            app.wrap().query_all_balances(contract_addr).unwrap(),
+            vec![]
+        );
     }
 
     #[test]
     fn withdraw_to() {
-        let owner = Addr::unchecked("owner");
+        // let owner = Addr::unchecked("owner");
+        // let receiver = Addr::unchecked("receiver");
         let sender = Addr::unchecked("sender");
-        let receiver = Addr::unchecked("receiver");
 
         let mut app = App::new(|router, _api, storage| {
             router
@@ -314,6 +321,11 @@ mod test {
                 .init_balance(storage, &sender, coins(10, "atom"))
                 .unwrap();
         });
+
+        // creating addresses using this approach to support Bech32
+        // ref: https://medium.com/cosmwasm/addresses-in-cosmwasm-multitest-68207ae845e6
+        let owner = app.api().addr_make("owner");
+        let receiver = app.api().addr_make("receiver");
 
         let contract_id = app.store_code(counting_contract());
 
@@ -352,17 +364,17 @@ mod test {
 
         // TODO Fix these asserts since they fail with
         // "Querier contract error: Generic error: Error decoding bech32"
-
-        // assert_eq!(app.wrap().query_all_balances(owner).unwrap(), vec![]);
         // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
-        // assert_eq!(
-        //     app.wrap().query_all_balances(receiver).unwrap(),
-        //     coins(5, "atom")
-        // );
-        // assert_eq!(
-        //     app.wrap().query_all_balances(contract_addr).unwrap(),
-        //     coins(5, "atom")
-        // );
+
+        assert_eq!(app.wrap().query_all_balances(owner).unwrap(), vec![]);
+        assert_eq!(
+            app.wrap().query_all_balances(receiver).unwrap(),
+            coins(5, "atom")
+        );
+        assert_eq!(
+            app.wrap().query_all_balances(contract_addr).unwrap(),
+            coins(5, "atom")
+        );
     }
 
     #[test]
