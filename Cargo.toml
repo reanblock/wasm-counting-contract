@@ -9,8 +9,10 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cosmwasm-schema = "2.0.3"
 cosmwasm-std = "2.0.3"
 cw-storage-plus = "2.0.0"
+schemars = "0.8.21"
 serde = { version = "1.0.203", features = ["derive"] }
 thiserror = "1.0.61"
 
