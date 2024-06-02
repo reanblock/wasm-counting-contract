@@ -1,4 +1,6 @@
-use cosmwasm_std::{coin, coins, Addr, Decimal};
+use std::str::FromStr;
+
+use cosmwasm_std::{coin, coins, Addr, Decimal, Uint128};
 use cw_multi_test::App;
 
 use crate::error::ContractError;
@@ -8,6 +10,21 @@ use crate::msg::{Parent, ValueResp};
 use super::contract::CountingContract;
 
 const ATOM: &str = "atom";
+
+#[test]
+fn cosmwasm_tests() {
+    let n = Uint128::new(100);
+    let d  = Decimal::from_ratio(Uint128::new(1), Uint128::new(2));
+    let ds = Decimal::from_str("0.5");
+
+    // Get the inner u128 value
+    let inner_value: u128 = n.into();
+
+    println!("The number is: {}", n);
+    println!("The inner_value is: {}", inner_value);
+    println!("The decimal is: {}", d);
+    println!("The decimal from string is: {}", ds.unwrap());
+}
 
 #[test]
 fn query_value() {
@@ -393,6 +410,10 @@ fn donating_parent() {
 
     assert_eq!(app.wrap().query_all_balances(owner).unwrap(), vec![]);
     // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
+
+    // NOTE: below tests fail because of the error in contract.rs donate function
+    // cannot multiply `Uint128` by `Decimal` !!
+    // once this multiplication is done these tests will pass!
     assert_eq!(
         app.wrap().query_all_balances(contract.addr()).unwrap(),
         coins(18, ATOM)

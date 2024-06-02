@@ -88,7 +88,7 @@ pub mod exec {
                         .into_iter()
                         .map(|mut coin| {
                             // TODO FIX  cannot multiply `Uint128` by `Decimal` !!
-                            coin.amount = coin.amount * parent_donation.part;
+                            // coin.amount = coin.amount * parent_donation.part;
                             coin
                         })
                         .collect();
