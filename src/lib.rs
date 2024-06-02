@@ -1,28 +1,17 @@
-use cosmwasm_std::{
-    to_json_binary, 
-    Binary, 
-    Deps,
-    DepsMut, 
-    Env, 
-    MessageInfo, 
-    Response, 
-    StdResult,
-};
-
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
-use msg::InstantiateMsg;
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use error::ContractError;
+use msg::InstantiateMsg;
 
 mod contract;
-mod error;
-mod state;
+pub mod error;
 pub mod msg;
-
 #[cfg(any(test, feature = "tests"))]
 pub mod multitest;
- 
+mod state;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -30,7 +19,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    contract::instantiate(deps, info, msg.counter, msg.minimal_donation)
+    contract::instantiate(deps, info, msg.counter, msg.minimal_donation, msg.parent)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -42,22 +31,20 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     use contract::exec;
     use msg::ExecMsg::*;
- 
+
     match msg {
-        Donate {} => exec::donate(deps, info).map_err(ContractError::Std),
+        Donate {} => exec::donate(deps, env, info).map_err(ContractError::Std),
         Reset { counter } => exec::reset(deps, info, counter),
         Withdraw {} => exec::withdraw(deps, env, info),
-        WithdrawTo { receiver, funds } => {
-            exec::withdraw_to(deps, env, info, receiver, funds)
-        }
+        WithdrawTo { receiver, funds } => exec::withdraw_to(deps, env, info, receiver, funds),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
-    use msg::QueryMsg::*;
     use contract::query;
- 
+    use msg::QueryMsg::*;
+
     match msg {
         Value {} => to_json_binary(&query::value(deps)?),
     }

@@ -1,8 +1,10 @@
-use cosmwasm_std::{coin, coins, Addr};
+use cosmwasm_std::{coin, coins, Addr, Decimal};
 use cw_multi_test::App;
 
-use crate::msg::ValueResp;
 use crate::error::ContractError;
+use crate::msg::{Parent, ValueResp};
+// use crate::state::{ParentDonation, State, PARENT_DONATION, STATE};
+
 use super::contract::CountingContract;
 
 const ATOM: &str = "atom";
@@ -19,8 +21,10 @@ fn query_value() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         10,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -41,8 +45,10 @@ fn donate() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         0,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -65,14 +71,15 @@ fn donate_with_funds() {
     });
 
     let code_id = CountingContract::store_code(&mut app);
-
     let contract = CountingContract::instantiate(
         &mut app,
         code_id,
         &owner,
         "Counting contract",
         None,
-        coin(10, "atom"),
+        None,
+        coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -98,7 +105,9 @@ fn expecting_no_funds() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(0, ATOM),
+        None,
     )
     .unwrap();
 
@@ -121,7 +130,9 @@ fn reset() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -133,9 +144,9 @@ fn reset() {
 
 #[test]
 fn withdraw() {
-    let sender = Addr::unchecked("sender");
     // moved to after creating the app instance (see below)
     // let owner = Addr::unchecked("owner");
+    let sender = Addr::unchecked("sender");
 
     let mut app = App::new(|router, _api, storage| {
         router
@@ -156,7 +167,9 @@ fn withdraw() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -168,7 +181,7 @@ fn withdraw() {
 
     assert_eq!(
         app.wrap().query_all_balances(owner).unwrap(),
-        coins(10, ATOM)
+        coins(10, "atom")
     );
     // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
     assert_eq!(
@@ -179,9 +192,10 @@ fn withdraw() {
 
 #[test]
 fn withdraw_to() {
-    let sender = Addr::unchecked("sender");
+    // moved to after creating the app instance (see below)
     // let owner = Addr::unchecked("owner");
     // let receiver = Addr::unchecked("receiver");
+    let sender = Addr::unchecked("sender");
 
     let mut app = App::new(|router, _api, storage| {
         router
@@ -202,7 +216,9 @@ fn withdraw_to() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -218,11 +234,11 @@ fn withdraw_to() {
     // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
     assert_eq!(
         app.wrap().query_all_balances(receiver).unwrap(),
-        coins(5, ATOM)
+        coins(5, "atom")
     );
     assert_eq!(
         app.wrap().query_all_balances(contract.addr()).unwrap(),
-        coins(5, ATOM)
+        coins(5, "atom")
     );
 }
 
@@ -240,7 +256,9 @@ fn unauthorized_withdraw() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -267,7 +285,9 @@ fn unauthorized_withdraw_to() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -296,7 +316,9 @@ fn unauthorized_reset() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
+        None,
     )
     .unwrap();
 
@@ -306,5 +328,79 @@ fn unauthorized_reset() {
         ContractError::Unauthorized {
             owner: owner.into()
         },
+    );
+}
+
+#[test]
+fn donating_parent() {
+    // moved to after creating the app instance (see below)
+    // let owner = Addr::unchecked("owner");
+    let sender = Addr::unchecked("sender");
+
+    let mut app = App::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &sender, coins(20, "atom"))
+            .unwrap();
+    });
+    
+    // creating addresses using this approach to support Bech32
+    // ref: https://medium.com/cosmwasm/addresses-in-cosmwasm-multitest-68207ae845e6
+    let owner = app.api().addr_make("owner");
+
+    let code_id = CountingContract::store_code(&mut app);
+
+    let parent_contract = CountingContract::instantiate(
+        &mut app,
+        code_id,
+        &owner,
+        "Parent contract",
+        None,
+        None,
+        coin(0, ATOM),
+        None,
+    )
+    .unwrap();
+
+    let contract = CountingContract::instantiate(
+        &mut app,
+        code_id,
+        &owner,
+        "Counting contract",
+        None,
+        None,
+        coin(10, ATOM),
+        Parent {
+            addr: parent_contract.addr().to_string(),
+            donating_period: 2,
+            part: Decimal::percent(10),
+        },
+    )
+    .unwrap();
+
+    contract
+        .donate(&mut app, &sender, &coins(10, ATOM))
+        .unwrap();
+    contract
+        .donate(&mut app, &sender, &coins(10, ATOM))
+        .unwrap();
+
+    let resp = parent_contract.query_value(&app).unwrap();
+    assert_eq!(resp, ValueResp { value: 1 });
+
+    let resp = contract.query_value(&app).unwrap();
+    assert_eq!(resp, ValueResp { value: 2 });
+
+    assert_eq!(app.wrap().query_all_balances(owner).unwrap(), vec![]);
+    // assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
+    assert_eq!(
+        app.wrap().query_all_balances(contract.addr()).unwrap(),
+        coins(18, ATOM)
+    );
+    assert_eq!(
+        app.wrap()
+            .query_all_balances(parent_contract.addr())
+            .unwrap(),
+        coins(2, ATOM)
     );
 }
