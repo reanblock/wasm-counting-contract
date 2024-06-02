@@ -12,10 +12,13 @@ use cosmwasm_std::{
 
 use msg::InstantiateMsg;
 use error::ContractError;
+
 mod contract;
 mod error;
 mod state;
 pub mod msg;
+#[cfg(test)]
+pub mod multitest;
  
 #[entry_point]
 pub fn instantiate(
